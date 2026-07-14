@@ -44,6 +44,7 @@ jobs:
         run: |
           IMAGE="outputs/${{ matrix.arch }}/alpine-milkv-duo256m-${{ matrix.arch }}.img"
           KERNEL="outputs/kernel-${{ matrix.arch }}/Image"
+          [ -f "$KERNEL" ] || KERNEL=""   # fall back to extracting from the image
           sh scripts/capture-boot.sh "${{ matrix.arch }}" "$IMAGE" "$KERNEL" \
             > "outputs/boot-${{ matrix.arch }}.md"
 
