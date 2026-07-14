@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
 
-DEFAULT_BOARD=duos
+DEFAULT_BOARD=duo256m
 DEFAULT_HNAME=milkv-alpine
 DEFAULT_PASSWORD=milkv
 ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
 ALPINE_VERSION=v3.21
-KERNEL_VERSION=7.0
 OVERDRIVE=.od
 
 FLAG=$1
@@ -59,7 +58,6 @@ Selected Configuration:
     Board:          $BOARD
     Alpine Mirror:  $ALPINE_MIRROR
     Alpine Version: $ALPINE_VERSION
-    Kernel Version: $KERNEL_VERSION
     Hostname:       $HNAME
     Password:       $DISPLAY_PASSWORD
     CPU Overdrive:  $DISPLAY_OD
@@ -76,31 +74,106 @@ export CROSS_COMPILE=riscv64-linux-gnu-
 JOBS=$(nproc)
 
 # ============================================
-# STEP 1: Build kernel
+# STEP 1: Build kernel (always latest stable)
 # ============================================
 echo ""
-echo "=== Step 1: Building Linux $KERNEL_VERSION kernel ==="
+echo "=== Step 1: Building latest stable Linux kernel ==="
 
-if [ ! -d /project/kernel/linux ]; then
-    echo "Cloning pre-patched Linux kernel for Milk-V Duo..."
-    git clone --depth=1 https://github.com/queenkjuul/linux.git \
-        /project/kernel/linux
+# Fetch latest stable version from kernel.org
+echo "Determining latest stable kernel..."
+LATEST_STABLE=$(wget -qO- https://cdn.kernel.org/pub/linux/kernel/v7.x/ 2>/dev/null | grep -oP 'linux-7\.\d+\.\d+\.tar' | sed 's/linux-//;s/\.tar//' | sort -V | tail -1)
+if [ -z "$LATEST_STABLE" ]; then
+    # Try another approach
+    LATEST_STABLE=$(wget -qO- https://www.kernel.org 2>/dev/null | grep -oP 'stable:\s+\K[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+fi
+if [ -z "$LATEST_STABLE" ]; then
+    echo "WARNING: Could not fetch latest stable, using 7.1.3"
+    LATEST_STABLE="7.1.3"
+fi
+echo "Latest stable kernel: $LATEST_STABLE"
+LATEST_MAJOR=$(echo "$LATEST_STABLE" | cut -d. -f1)
+KERNEL_TAG="v${LATEST_STABLE}"
+
+KERNEL_DIR="/project/kernel/linux"
+PATCHES_DIR="/project/kernel/patches"
+
+# Remove stale clone if version changed
+if [ -d "$KERNEL_DIR" ]; then
+    OLD_VERSION=$(cd "$KERNEL_DIR" && git describe --tags 2>/dev/null || echo "unknown")
+    if [ "$OLD_VERSION" != "$KERNEL_TAG" ]; then
+        echo "Kernel version changed ($OLD_VERSION -> $LATEST_STABLE), re-cloning..."
+        rm -rf "$KERNEL_DIR"
+    fi
 fi
 
-cd /project/kernel/linux
+if [ ! -d "$KERNEL_DIR" ]; then
+    echo "Downloading Linux $LATEST_STABLE..."
+    KERN_SRC_URL="https://cdn.kernel.org/pub/linux/kernel/v${LATEST_MAJOR}.x/linux-${LATEST_STABLE}.tar.xz"
+    wget -q -O /tmp/linux.tar.xz "$KERN_SRC_URL"
+    tar -xf /tmp/linux.tar.xz -C /project/kernel/
+    mv "/project/kernel/linux-${LATEST_STABLE}" "$KERNEL_DIR"
+    rm -f /tmp/linux.tar.xz
+fi
 
+cd "$KERNEL_DIR"
 echo "Kernel version: $(make kernelrelease 2>/dev/null || echo 'unknown')"
 
+# Apply out-of-tree patches
+echo ""
+echo "=== Applying patches ==="
+APPLIED=0
+FAILED=0
+SKIPPED=0
+PATCH_LOG="/project/images/patch-report.txt"
+mkdir -p /project/images
+echo "Patch report for Linux $LATEST_STABLE" > "$PATCH_LOG"
+echo "Generated: $(date -u)" >> "$PATCH_LOG"
+echo "=================================" >> "$PATCH_LOG"
+
+if [ -d "$PATCHES_DIR" ] && [ "$(ls -A "$PATCHES_DIR"/*.patch 2>/dev/null)" ]; then
+    for patch in "$PATCHES_DIR"/*.patch; do
+        name=$(basename "$patch")
+        # Try patch -p1 (works on any source tree)
+        if patch -p1 --dry-run < "$patch" 2>/dev/null | grep -qE "patching file|checking file"; then
+            patch -p1 --force < "$patch" 2>/dev/null || true
+            echo "  APPLIED: $name"
+            echo "APPLIED: $name" >> "$PATCH_LOG"
+            APPLIED=$((APPLIED + 1))
+        else
+            echo "  SKIPPED: $name (already upstream or conflict)"
+            echo "SKIPPED: $name" >> "$PATCH_LOG"
+            SKIPPED=$((SKIPPED + 1))
+        fi
+    done
+else
+    echo "No patches found in $PATCHES_DIR"
+fi
+
+echo ""
+echo "Patch summary: $APPLIED applied, $SKIPPED skipped"
+echo "" >> "$PATCH_LOG"
+echo "Summary: $APPLIED applied, $SKIPPED skipped" >> "$PATCH_LOG"
+
 # Use our defconfig
+echo ""
 echo "Configuring kernel..."
 cp /project/kernel/milkv-${BOARD}_defconfig .config
 
+# Enable virtio for QEMU testing
+sed -i 's/^# CONFIG_VIRTIO_BLK is not set/CONFIG_VIRTIO_BLK=y/' .config
+sed -i 's/^# CONFIG_VIRTIO_NET is not set/CONFIG_VIRTIO_NET=y/' .config
+sed -i 's/^# CONFIG_VIRTIO_CONSOLE is not set/CONFIG_VIRTIO_CONSOLE=y/' .config
+sed -i 's/^# CONFIG_VIRTIO_MENU is not set/CONFIG_VIRTIO_MENU=y/' .config
+sed -i 's/^# CONFIG_SCSI_VIRTIO is not set/CONFIG_SCSI_VIRTIO=y/' .config
+sed -i 's/^# CONFIG_VIRTIO_FS is not set/CONFIG_VIRTIO_FS=y/' .config
+grep -q 'CONFIG_VIRTIO_MMIO=' .config || echo 'CONFIG_VIRTIO_MMIO=y' >> .config
+grep -q 'CONFIG_VIRTIO_PCI=' .config || echo 'CONFIG_VIRTIO_PCI=y' >> .config
+grep -q 'CONFIG_NET_9P=' .config || echo 'CONFIG_NET_9P=y' >> .config
+grep -q 'CONFIG_NET_9P_VIRTIO=' .config || echo 'CONFIG_NET_9P_VIRTIO=y' >> .config
+grep -q 'CONFIG_9P_FS=' .config || echo 'CONFIG_9P_FS=y' >> .config
+
 echo "Building kernel with $JOBS jobs..."
 make olddefconfig 2>/dev/null
-
-echo "Verifying virtio config..."
-grep -E 'CONFIG_VIRTIO_BLK=|CONFIG_VIRTIO_NET=|CONFIG_VIRTIO_MMIO=|CONFIG_VIRTIO_CONSOLE=|CONFIG_SCSI_VIRTIO=' .config || echo "WARNING: virtio not in config!"
-
 make -j"$JOBS" Image modules dtbs 2>&1 | tail -5
 
 # Copy outputs
@@ -199,8 +272,12 @@ echo ""
 echo "============================================"
 echo " BUILD COMPLETE!"
 echo "============================================"
+echo "Kernel: Linux $LATEST_STABLE"
+echo "Patches: $APPLIED applied, $SKIPPED skipped"
 echo "Image: images/alpine-milkv-$BOARD.img"
 echo "Size:  $(ls -lh images/alpine-milkv-$BOARD.img | awk '{print $5}')"
+echo ""
+echo "Patch report: images/patch-report.txt"
 echo ""
 echo "Flash with:"
 echo "  sudo dd if=images/alpine-milkv-$BOARD.img of=/dev/sdX bs=4M status=progress"

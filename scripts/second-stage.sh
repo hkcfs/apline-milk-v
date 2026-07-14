@@ -37,8 +37,7 @@ apk add --no-cache \
     util-linux \
     chrony \
     openrc \
-    udev \
-    udev-openrc
+    eudev
 
 echo "Installing network packages..."
 apk add --no-cache \
@@ -73,7 +72,7 @@ iface eth0 inet dhcp
 EOF
 
 # Enable services
-rc-update add udev sysinit 2>/dev/null || true
+rc-update add eudev boot 2>/dev/null || true
 rc-update add hwclock boot 2>/dev/null || true
 rc-update add sshd default 2>/dev/null || true
 rc-update add networking default 2>/dev/null || true

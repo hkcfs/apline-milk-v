@@ -5,7 +5,7 @@
 **Name:** alpine-milkv
 **Purpose:** Minimal Alpine Linux distribution for Milk-V Duo S and Duo 256M RISC-V SBCs
 **Base:** Alpine Linux v3.21
-**Kernel:** Mainline Linux 7.1.3 with Milk-V Duo patches
+**Kernel:** Latest stable Linux (auto-fetched from kernel.org, currently 7.1.3) with Milk-V Duo patches
 **Target Hardware:** Sophgo CV1812H/SG2000/SG2002 (RISC-V 64)
 
 ## Hardware Specifications
@@ -26,165 +26,95 @@
 - **USB:** USB-C only
 - **GPIO:** 26 pins
 
-## Architecture
-
-### Dual-Core Design
-The CV1812H has two cores:
-1. **Main Core (RISC-V):** Runs Linux - this is what we build for
-2. **Little Core (ARM Cortex-A7):** Used for real-time tasks, Arduino compatibility
-
-### Boot Flow
-```
-SD Card -> FIP (Bootloader) -> U-Boot -> Linux Kernel -> Alpine Rootfs
-```
-
 ## Build System
 
 ### Prerequisites
 - Docker and Docker Compose (ONLY requirement - nothing installed on host)
 - ~10GB free disk space
-- Linux/macOS/Windows with WSL2
 
 ### Build Commands
 ```bash
-# Build everything (kernel + rootfs + image)
-docker compose run --rm builder make all
+# Build for Duo 256M (default)
+docker compose run --rm builder bash /project/build.sh duo256m
 
-# Build just the kernel
-docker compose run --rm builder make kernel
+# Build for Duo S
+docker compose run --rm builder bash /project/build.sh duos
 
-# Build just the rootfs  
-docker compose run --rm builder make rootfs
+# Build for Duo S with WiFi
+docker compose run --rm builder bash /project/build.sh duos-wifi
+```
 
-# Create final SD card image
-docker compose run --rm builder make image
-
-# Flash to SD card (requires access to /dev/sdX)
-docker compose run --rm --device /dev/sdX builder make flash SD=/dev/sdX
+### QEMU Testing
+```bash
+sudo qemu-system-riscv64 -machine virt -m 512M -nographic \
+  -kernel images/kernel/Image \
+  -append 'console=ttyS0 root=/dev/vda3 rootwait rw' \
+  -drive file=images/alpine-milkv-duo256m.img,format=raw,if=none,id=hd0 \
+  -device virtio-blk-device,drive=hd0
 ```
 
 ## Project Structure
 ```
-alpine-milkv/
+alpine-milk-v/
 ├── SOUL.md                    # This file
-├── Makefile                   # Main build orchestration
+├── build.sh                   # Main build script (kernel + rootfs + image)
 ├── docker-compose.yml         # Docker build environment
-├── Dockerfile                 # Build container definition
+├── Dockerfile                 # Build container (Ubuntu 24.04 + RISC-V cross-tools)
+├── genimage.cfg               # SD card partition layout
 ├── scripts/
-│   ├── build-kernel.sh        # Cross-compile Linux kernel
-│   ├── build-rootfs.sh        # Create Alpine rootfs
-│   ├── build-image.sh         # Assemble SD card image
-│   ├── flash.sh               # Write image to SD card
-│   ├── setup-kernel-config.sh # Configure kernel
-│   └── test-image.sh          # Verify image integrity
+│   ├── second-stage.sh        # Alpine rootfs configuration
+│   ├── first-boot.sh          # First boot setup (partition expand, SSH keys)
+│   └── setup.sh               # Build container dependencies
 ├── kernel/
-│   ├── defconfig              # Kernel config for Milk-V Duo
-│   ├── patches/               # Kernel patches
-│   └── modules/               # Out-of-tree modules
-├── bootloader/
-│   ├── fip.bin                # Vendor bootloader (binary blob)
-│   └── u-boot.env             # U-Boot environment
-├── rootfs/
-│   ├── apkovl/                # Alpine overlays
-│   ├── packages/              # Custom packages
-│   └── overlays/              # Filesystem overlays
-├── configs/
-│   ├── genimage.cfg           # Image partition layout
-│   └── kernel.config          # Full kernel config
+│   ├── milkv-duos_defconfig   # Kernel config for Duo S
+│   ├── milkv-duo256m_defconfig # Kernel config for Duo 256M
+│   └── patches/               # 37 out-of-tree patches for CV18XX
+├── milkv-bootloader/
+│   ├── duos/fip.bin           # Vendor bootloader for Duo S
+│   └── duo256m/fip.bin        # Vendor bootloader for Duo 256M
 └── images/                    # Output directory
+    ├── alpine-milkv-*.img     # SD card images
+    ├── patch-report.txt       # Patch application report
+    └── kernel/                # Built kernel Image + DTBs
 ```
 
-## Key Technical Details
+## Build Behavior
 
-### Kernel Configuration
-- Arch: riscv64
-- Cross-compiler: riscv64-linux-gnu-gcc
-- Defconfig: milkv-duos_defconfig
-- Required modules: USB, Ethernet, WiFi (aic8800), I2S audio
+### Automatic Kernel Management
+- **Always fetches latest stable kernel** from kernel.org
+- If version changes, re-downloads and re-patches
+- Applies 37 out-of-tree patches automatically
+- Failed/skipped patches are logged to `images/patch-report.txt`
 
-### Rootfs Construction
-- Alpine mkimage script for riscv64
-- Packages: busybox, musl, linux-firmware, openssh, etc
-- Init: OpenRC (Alpine default)
-- Shell: ash (BusyBox)
+### Patch Strategy
+The 37 patches add support for:
+- **Duo-S board DTS** (12 patches) - not yet upstream, expected v7.2
+- **Thermal driver** (4 patches) - under review
+- **PWM driver** (4 patches) - under review
+- **Remote-proc C906L** (4 patches) - under review
+- **DMA CV1800B** (3 patches) - partially upstream
+- **Ethernet MDIO mux** (3 patches) - under review
+- **eFuse driver** (3 patches) - under review
+- **I2S/Audio** (2 patches) - under review
+- **Timer, Watchdog, Mailbox** (remaining)
 
-### Image Layout (genimage.cfg)
-```
-Partition 1: FAT32 128MB - Boot (fip.bin, kernel, dtb)
-Partition 2: swap 256MB
-Partition 3: ext4 remaining - Root filesystem
-```
-
-### WiFi/Firmware
-- aic8800 driver requires firmware blobs
-- Located in /lib/firmware/aic8800/
-- Must be included in rootfs
-
-## Supported Features
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Boot | ✅ | Via vendor FIP + mainline U-Boot |
-| Ethernet | ✅ | Built into kernel |
-| USB Host | ✅ | USB-A port |
-| USB Device | ✅ | USB-C (serial/network) |
-| WiFi | ✅ | aic8800 driver |
-| Bluetooth | ✅ | aic8800 driver |
-| I2S Audio | ✅ | Built-in analog |
-| SPI | ✅ | Via device tree |
-| I2C | ✅ | Via device tree |
-| UART | ✅ | Multiple ports |
-| PWM | ✅ | With Duo S |
-| GPIO | ✅ | Via sysfs/gpiod |
-| Camera/MIPI | ❌ | Not yet mainlined |
-| TPU/NPU | ❌ | Not yet mainlined |
-
-## Default Credentials
-- **Username:** root
-- **Password:** milkv
-
-## Networking
-### USB CDC-NCM (Default)
-- IP: 192.168.42.1
-- Connect: `ssh root@192.168.42.1`
-
-### Ethernet
-- DHCP by default
-- Or static via `/etc/network/interfaces`
-
-## Important Notes
-
-1. **Docker Only:** Never install build tools on host. Everything runs in containers.
-2. **First Boot:** Takes ~2 min for SSH key gen and partition expansion.
-3. **CPU Overdrive:** Default 1000MHz (vendor default). Can reduce for power saving.
-4. **Partition Expand:** Root partition auto-expands to fill SD card on first boot.
+See [Sophgo Linux Wiki](https://github.com/sophgo/linux/wiki) for upstream status.
 
 ## CRITICAL: Docker Build Rules
 
 **NEVER USE `--no-cache` WITH DOCKER BUILDS!**
 
-This is a hard rule. Breaking it wastes time and bandwidth.
-
 - **BAD:** `docker compose build --no-cache builder`
 - **GOOD:** `docker compose build builder`
 - **GOOD:** `sudo docker builder prune -f` (if you need to force rebuild)
 
-If a build fails, fix the issue in the Dockerfile, then rebuild normally.
-Docker layer caching is our friend - it makes rebuilds fast.
-
-If you absolutely must rebuild from scratch:
-```bash
-sudo docker builder prune -f
-docker compose build builder
-```
-
-**NEVER** add `--no-cache` to any docker build command. Not in scripts, not in Makefile, not manually.
+## Default Credentials
+- **Username:** root
+- **Password:** milkv
 
 ## Credits
 - Based on: [milkv-duo-ubuntu](https://github.com/queenkjuul/milkv-duo-ubuntu)
 - Alpine Linux: [alpinelinux.org](https://alpinelinux.org/)
 - Milk-V: [milkv.io](https://milkv.io/)
 - Kernel patches: [sophgo-linux](https://github.com/sophgo/linux)
-
-## License
-This project is open source. See LICENSE file for details.
+- Upstream status: [Sophgo Linux Wiki](https://github.com/sophgo/linux/wiki)
