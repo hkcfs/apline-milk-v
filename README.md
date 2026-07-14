@@ -1,22 +1,30 @@
 # Alpine Linux for the Milk-V Duo 256M (SG2002)
 
 Minimal, Docker-based build system that produces flashable **Alpine Linux**
-images for the **Milk-V Duo 256M** (Sophgo SG2002) — both the **RISC-V**
+images for the **Milk-V Duo 256M** (Sophgo SG2002): both the **RISC-V**
 (C906) and **ARM64** (Cortex-A53) cores. The latest Alpine release is pulled
 in automatically, so the images stay current with no manual intervention.
 
+## AI Disclosure
+
+The idea, scope, and direction of this project are entirely human. The code
+and the documentation in this repository were written with the assistance of
+AI. I used AI heavily throughout, for the build system, packaging, kernel and
+device-tree configuration, the Docker setup, the GitHub Actions automation,
+and these docs. Review and verify the output before relying on it.
+
 ## Features
 
-- **Alpine Linux** (latest stable, currently 3.24) — minimal and secure
-- **RISC-V kernel** — `build.sh` fetches the newest **stable mainline** kernel
+- **Alpine Linux** (latest stable, currently 3.24): minimal and secure
+- **RISC-V kernel**: `build.sh` fetches the newest **stable mainline** kernel
   from kernel.org on every build
-- **ARM64 kernel** — uses the proven **vendor kernel from `scpcom/linux`**
+- **ARM64 kernel**: uses the proven **vendor kernel from `scpcom/linux`**
   (`licheervnano-merged-5.10.y`, ≈ v5.10.260), since mainline Linux has no
   arm64 SG2002 support. This is what actually runs on the Duo 256M's Cortex-A53.
-- **Two architectures** — `riscv` (default) and `arm64`, selectable per build
-- **Docker-only** — no host toolchain needed; everything builds inside a
+- **Two architectures**: `riscv` (default) and `arm64`, selectable per build
+- **Docker-only**: no host toolchain needed; everything builds inside a
   container
-- **Automated** — GitHub Actions builds the kernel weekly and the full image
+- **Automated**: GitHub Actions builds the kernel weekly and the full image
   monthly, and **boots each image in QEMU to prove it works** before publishing
 
 ## Quick start (local build)
@@ -92,15 +100,15 @@ before you flash it.
 1. Flash the image to an SD card and insert it into the Duo 256M.
 2. Power on (first boot expands the root partition).
 3. Connect over serial (`ttyS0`, 115200n8) or SSH once networking is up.
-4. Default credentials — user `root`, password `milkv`.
+4. Default credentials: user `root`, password `milkv`.
 
 ## Credits
 
-- [milkv-duo-ubuntu](https://github.com/queenkjuul/milkv-duo-ubuntu) — original Ubuntu port
-- [scpcom/sophgo-sg200x-debian](https://github.com/scpcom/sophgo-sg200x-debian) — SG200x kernel/slim-config reference
-- [lupyuen/nuttx-sg2000](https://github.com/lupyuen/nuttx-sg2000) — automated daily-build + boot-proof release pattern
+- [milkv-duo-ubuntu](https://github.com/queenkjuul/milkv-duo-ubuntu): original Ubuntu port
+- [scpcom/sophgo-sg200x-debian](https://github.com/scpcom/sophgo-sg200x-debian): SG200x kernel/slim-config reference
+- [lupyuen/nuttx-sg2000](https://github.com/lupyuen/nuttx-sg2000): automated daily-build + boot-proof release pattern
 - [Alpine Linux](https://alpinelinux.org/), [Milk-V](https://milkv.io/), [Sophgo](https://www.sophgo.com/)
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+GPL-2.0. See [LICENSE](LICENSE).

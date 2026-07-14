@@ -11,7 +11,7 @@
 ## Hardware Specifications
 
 ### Milk-V Duo 256M (the only supported board)
-- **CPU:** Sophgo SG2002 — RISC-V C906 @ 1GHz (riscv arch) **and** ARM64 Cortex-A53 (arm64 arch), switchable
+- **CPU:** Sophgo SG2002: RISC-V C906 @ 1GHz (riscv arch) **and** ARM64 Cortex-A53 (arm64 arch), switchable
 - **RAM:** 256MB DDR3
 - **Storage:** microSD slot
 - **USB:** USB-C only (CDC-NCM device mode)
