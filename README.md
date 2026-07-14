@@ -27,19 +27,18 @@ make build-image
 
 # Build the ARM64 image
 make build-image ARCH=arm64
-
-# Or call build.sh directly
-./build.sh duo256m            # riscv
-./build.sh --arch arm64 duo256m
 ```
 
-The resulting image is written to `outputs/alpine-milkv-duo256m-<arch>.img`.
+`build.sh` runs inside the builder container and uses absolute `/project/...`
+paths, so always drive it via `make` / `docker compose` (never call it directly
+on the host). The resulting image is written to
+`outputs/<arch>/alpine-milkv-duo256m-<arch>.img`.
 
 ### Flash to SD card
 
 ```bash
 lsblk                                   # find your SD card
-gzip -cd outputs/alpine-milkv-duo256m-riscv.img.gz \
+gzip -cd outputs/riscv/alpine-milkv-duo256m-riscv.img.gz \
   | sudo dd of=/dev/sdX bs=4M status=progress
 ```
 

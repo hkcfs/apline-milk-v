@@ -33,17 +33,16 @@ docker compose run --rm builder bash /project/build.sh --arch arm64 duo256m
 ```
 
 Outputs land in `outputs/` (the compose `images` volume maps there):
-`outputs/alpine-milkv-duo256m-<arch>.img`, `outputs/kernel-<arch>/Image`,
+`outputs/<arch>/alpine-milkv-duo256m-<arch>.img`, `outputs/kernel-<arch>/Image`,
 `outputs/<arch>/{boot,dtb,swap,fip}`.
 
 ### QEMU Testing / Release Boot-Proof
 ```bash
-# RISC-V (QEMU needs the build-time kernel, since /boot on the image is rootfs-mounted)
+# RISC-V (QEMU 'virt' supplies its own DTB; -kernel uses the build-time Image)
 sudo qemu-system-riscv64 -machine virt -m 256M -nographic \
   -kernel outputs/kernel-riscv/Image \
-  -dtb    outputs/riscv/milkv-duo256m.dtb \
   -append 'console=ttyS0 root=/dev/vda3 rootwait rw' \
-  -drive  file=outputs/alpine-milkv-duo256m-riscv.img,format=raw,if=none,id=hd0 \
+  -drive  file=outputs/riscv/alpine-milkv-duo256m-riscv.img,format=raw,if=none,id=hd0 \
   -device virtio-blk-device,drive=hd0 \
   -netdev user,id=net0,hostfwd=tcp::2222-:22 -device virtio-net-device,netdev=net0
 
@@ -51,7 +50,7 @@ sudo qemu-system-riscv64 -machine virt -m 256M -nographic \
 sudo qemu-system-aarch64 -machine virt -m 256M -cpu cortex-a53 -nographic \
   -kernel outputs/kernel-arm64/Image \
   -append 'console=ttyAMA0 root=/dev/vda3 rootwait rw' \
-  -drive  file=outputs/alpine-milkv-duo256m-arm64.img,format=raw,if=none,id=hd0 \
+  -drive  file=outputs/arm64/alpine-milkv-duo256m-arm64.img,format=raw,if=none,id=hd0 \
   -device virtio-blk-device,drive=hd0 \
   -netdev user,id=net0,hostfwd=tcp::2223-:22 -device virtio-net-device,netdev=net0
 ```
@@ -94,7 +93,7 @@ alpine-milk-v/
 ### Automatic Kernel Management
 - **Always fetches latest stable kernel** from kernel.org
 - If version changes, re-downloads and re-patches
-- Applies out-of-tree patches automatically (logged to `outputs/patch-report.txt`)
+- Applies out-of-tree patches automatically (logged to `outputs/<arch>/patch-report.txt`)
 - Failed/skipped patches are reported but do not abort the build
 
 ### Patch Strategy

@@ -12,6 +12,15 @@ kernel/linux/
 /fip.bin
 /sophgo/
 
+# CI / build artifacts that can land at the repo root
+*.img.gz
+*.zip
+boot.vfat
+rootfs.ext4
+patch-report.txt
+kernel-build.log
+build.log
+
 # Docker
 .docker/
 

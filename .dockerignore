@@ -1,0 +1,9 @@
+# Build context for the Docker builder image. The build context is the repo
+# root (both `docker compose build` and the CI `docker build -f docker/Dockerfile .`
+# use the repo root), so these paths are relative to the repo root.
+outputs/
+images/
+kernel/linux/
+.git/
+.github/
+*.log

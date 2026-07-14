@@ -25,11 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Pull prebaked builder image
-        run: docker pull ghcr.io/${{ github.repository }}/builder:latest
+      # Register binfmt so the builder container can chroot into the foreign-arch
+      # rootfs via qemu-user.
+      - name: Register binfmt (qemu-user)
+        uses: docker/setup-qemu-action@v3
 
       - name: Build kernel (${{ matrix.arch }})
         run: |
+          mkdir -p "outputs/${{ matrix.arch }}" "outputs/kernel-${{ matrix.arch }}"
+          docker pull ghcr.io/${{ github.repository }}/builder:latest || \
+            docker build -t ghcr.io/${{ github.repository }}/builder:latest -f docker/Dockerfile .
           docker run --rm --privileged \
             -v "${{ github.workspace }}/outputs:/project/images" \
             -v "${{ github.workspace }}/.kernel-src:/project/kernel/linux" \

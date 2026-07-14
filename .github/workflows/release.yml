@@ -28,17 +28,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Register binfmt so the builder container can chroot into the foreign-arch
+      # (riscv64 / aarch64) rootfs via qemu-user. Without this the build's
+      # second-stage chroot fails with "Exec format error" on x86 runners.
+      - name: Register binfmt (qemu-user)
+        uses: docker/setup-qemu-action@v3
+
       - name: Install QEMU / sshpass / mtools
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-system-riscv64 qemu-system-arm \
             sshpass mtools
 
-      - name: Pull prebaked builder image
-        run: docker pull ghcr.io/${{ github.repository }}/builder:latest
-
       - name: Build image (${{ matrix.arch }})
         run: |
+          # outputs/ is gitignored and absent on a clean checkout; the build.log
+          # redirect below needs the arch subdir to already exist.
+          mkdir -p "outputs/${{ matrix.arch }}" "outputs/kernel-${{ matrix.arch }}"
+          # Use the prebaked image if published, otherwise build it on the fly.
+          docker pull ghcr.io/${{ github.repository }}/builder:latest || \
+            docker build -t ghcr.io/${{ github.repository }}/builder:latest -f docker/Dockerfile .
           docker run --rm --privileged \
             -v "${{ github.workspace }}/outputs:/project/images" \
             -v "${{ github.workspace }}/.kernel-src:/project/kernel/linux" \
@@ -124,7 +133,7 @@ jobs:
               echo
               echo "### Boot proof (auto-captured in QEMU)"
               echo
-              cat "boots/boot-${a}/boot-${a}.md" 2>/dev/null || echo "_boot log missing_"
+              find boots -name "boot-${a}.md" -exec cat {} \; 2>/dev/null || echo "_boot log missing_"
               echo
             done
             echo "## Combined download"
