@@ -91,10 +91,14 @@ jobs:
           name: kernel-${{ matrix.arch }}
           path: kernel-${{ matrix.arch }}.zip
 
+      - name: Set release date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
       - name: Publish weekly kernel release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: kernel-${{ matrix.arch }}-$(date +'%Y-%m-%d')
-          name: Kernel ${{ matrix.arch }} $(date +'%Y-%m-%d')
+          tag_name: kernel-${{ matrix.arch }}-${{ steps.date.outputs.date }}
+          name: Kernel ${{ matrix.arch }} ${{ steps.date.outputs.date }}
           prerelease: false
           files: kernel-${{ matrix.arch }}.zip

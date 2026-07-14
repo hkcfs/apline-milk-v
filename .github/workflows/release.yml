@@ -115,11 +115,15 @@ jobs:
             cat "outputs/boot-${{ matrix.arch }}.md"
           } > "outputs/notes-${{ matrix.arch }}.md"
 
+      - name: Set release date
+        id: date
+        run: echo "date=$(date +'%Y-%m')" >> "$GITHUB_OUTPUT"
+
       - name: Publish per-arch release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: duo256m-${{ matrix.arch }}-$(date +'%Y-%m')
-          name: Duo 256M ${{ matrix.arch }} $(date +'%Y-%m')
+          tag_name: duo256m-${{ matrix.arch }}-${{ steps.date.outputs.date }}
+          name: Duo 256M ${{ matrix.arch }} ${{ steps.date.outputs.date }}
           body_path: outputs/notes-${{ matrix.arch }}.md
           prerelease: false
           files: |
@@ -170,10 +174,14 @@ jobs:
             echo "ARM64 (experimental, vendor kernel for real A53 core): \`alpine-milkv-duo256m-arm64.img.gz\`"
           } > NOTES.md
           cat NOTES.md
+      - name: Set release date
+        id: date
+        run: echo "date=$(date +'%Y-%m')" >> "$GITHUB_OUTPUT"
+
       - name: Publish combined release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: duo256m-$(date +'%Y-%m')
-          name: Duo 256M $(date +'%Y-%m')
+          tag_name: duo256m-${{ steps.date.outputs.date }}
+          name: Duo 256M ${{ steps.date.outputs.date }}
           body_path: NOTES.md
           prerelease: false
