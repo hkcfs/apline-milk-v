@@ -10,7 +10,7 @@ WIRELESS=$4
 [ -z "$HNAME" ] && { echo "No hostname!"; exit 1; }
 
 ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
-ALPINE_VERSION=v3.21
+ALPINE_VERSION=v3.24
 
 echo "Configuring APK repositories..."
 mkdir -p /etc/apk
@@ -96,6 +96,14 @@ cat > /etc/ssh/sshd_config <<EOF
 PermitRootLogin yes
 PasswordAuthentication yes
 EOF
+
+# Ensure a login prompt (getty) on the serial console. The Milk-V Duo console
+# and QEMU 'virt' both use ttyS0 @ 115200. Without this, boot completes but no
+# login: prompt ever appears on the serial line.
+touch /etc/inittab
+if ! grep -q "^ttyS0:" /etc/inittab; then
+    echo "ttyS0::respawn:/sbin/getty -L 115200 ttyS0 vt100" >> /etc/inittab
+fi
 
 # Create first-boot script
 mkdir -p /usr/libexec/milkv

@@ -4,7 +4,7 @@
 
 **Name:** alpine-milkv
 **Purpose:** Minimal Alpine Linux distribution for Milk-V Duo S and Duo 256M RISC-V SBCs
-**Base:** Alpine Linux v3.21
+**Base:** Alpine Linux v3.24 (3.24.1)
 **Kernel:** Latest stable Linux (auto-fetched from kernel.org, currently 7.1.3) with Milk-V Duo patches
 **Target Hardware:** Sophgo CV1812H/SG2000/SG2002 (RISC-V 64)
 

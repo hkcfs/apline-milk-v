@@ -6,7 +6,8 @@ DEFAULT_BOARD=duo256m
 DEFAULT_HNAME=milkv-alpine
 DEFAULT_PASSWORD=milkv
 ALPINE_MIRROR=https://dl-cdn.alpinelinux.org/alpine
-ALPINE_VERSION=v3.21
+ALPINE_VERSION=v3.24
+ALPINE_RELEASE=3.24.1
 OVERDRIVE=.od
 
 ARCH_TARGET=""
@@ -305,7 +306,7 @@ mkdir -p rootfs
 mkdir -p images
 
 wget -q -O /tmp/alpine-minirootfs.tar.gz \
-    "$ALPINE_MIRROR/$ALPINE_VERSION/releases/$ALPINE_ARCH/alpine-minirootfs-3.21.0-$ALPINE_ARCH.tar.gz"
+    "$ALPINE_MIRROR/$ALPINE_VERSION/releases/$ALPINE_ARCH/alpine-minirootfs-$ALPINE_RELEASE-$ALPINE_ARCH.tar.gz"
 
 echo "Extracting rootfs..."
 tar -xzf /tmp/alpine-minirootfs.tar.gz -C rootfs
