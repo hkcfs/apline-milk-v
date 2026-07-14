@@ -1,0 +1,32 @@
+# Build artifacts
+images/
+rootfs/rootfs/
+kernel/build/
+kernel/linux/
+.cache/
+
+# Docker
+.docker/
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.temp
+*.log
+
+# Compiled
+*.o
+*.ko
+*.mod.c
+*.order
+*.symvers

@@ -1,0 +1,26 @@
+services:
+  # Register binfmt for cross-arch builds (run once)
+  binfmt:
+    image: multiarch/qemu-user-static:register
+    privileged: true
+    platform: linux/amd64
+    command: ["--reset", "-y", "--capability", "yes"]
+
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: alpine-milkv-builder:latest
+    container_name: alpine-milkv-builder
+    depends_on:
+      - binfmt
+    privileged: true
+    volumes:
+      - ./images:/project/images
+    working_dir: /project
+
+  shell:
+    extends: builder
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/bash
