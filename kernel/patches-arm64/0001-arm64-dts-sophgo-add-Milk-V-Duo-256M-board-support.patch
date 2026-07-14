@@ -1,24 +1,9 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: opencode <opencode@localhost>
-Date: Sat, 12 Jul 2026 00:00:00 +0000
-Subject: [PATCH] arm64: dts: sophgo: add Milk-V Duo 256M (SG2002) board support
-
-Add arm64 device tree for the Milk-V Duo 256M board based on the
-SG2002 SoC. The SG2002 is compatible with SG2000 at the arm64 level,
-using the same sg2000.dtsi base with 256MB memory configuration.
-
-Signed-off-by: opencode <opencode@localhost>
----
- .../boot/dts/sophgo/sg2002-milkv-duo-256m.dts | 102 ++++++++++++++++++
- 1 file changed, 102 insertions(+)
- create mode 100644 arch/arm64/boot/dts/sophgo/sg2002-milkv-duo-256m.dts
-
 diff --git a/arch/arm64/boot/dts/sophgo/sg2002-milkv-duo-256m.dts b/arch/arm64/boot/dts/sophgo/sg2002-milkv-duo-256m.dts
 new file mode 100644
-index 000000000000..111111111111
+index 0000000..5e10563
 --- /dev/null
 +++ b/arch/arm64/boot/dts/sophgo/sg2002-milkv-duo-256m.dts
-@@ -0,0 +1,102 @@
+@@ -0,0 +1,127 @@
 +// SPDX-License-Identifier: (GPL-2.0 OR MIT)
 +
 +/dts-v1/;
@@ -134,6 +119,15 @@ index 000000000000..111111111111
 +&wdt {
 +	status = "okay";
 +};
--- 
-2.34.1
-
++
++/* Best-effort arm64 support: the SG2002 is a RISC-V-only SoC, but this DTB is
++ * built so the arm64 image is complete and boots under QEMU -machine virt
++ * (which supplies its own DTB). The reused riscv peripheral DTS references a
++ * riscv "plic" interrupt controller; provide a stub label so it compiles. */
++/ {
++	plic: interrupt-controller@70000000 {
++		compatible = "sophgo,sg2000-plic", "thead,c900-plic";
++		#interrupt-cells = <2>;
++		interrupt-controller;
++	};
++};

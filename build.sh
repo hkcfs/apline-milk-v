@@ -257,6 +257,15 @@ echo "=================================" >> "$PATCH_LOG"
 if [ -d "$PATCHES_DIR" ] && [ "$(ls -A "$PATCHES_DIR"/*.patch 2>/dev/null)" ]; then
     for patch in "$PATCHES_DIR"/*.patch; do
         name=$(basename "$patch")
+        # New-file patches: a stale copy left by a previous build makes `patch`
+        # skip re-applying (and keep the OLD content), so an edited patch would
+        # never take effect on incremental rebuilds. Remove the target first so
+        # the current patch content is always used. (The kernel source volume is
+        # persistent across builds.)
+        if grep -q "new file mode" "$patch"; then
+            newfile=$(grep -m1 '^+++ b/' "$patch" | sed 's|^+++ b/||')
+            [ -n "$newfile" ] && rm -f "$newfile"
+        fi
         # Determine appliability by EXIT CODE (not by grepping output, which
         # matches even when hunks fail). --forward skips already-applied hunks,
         # --fuzz=3 tolerates context drift against newer vanilla trees.

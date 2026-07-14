@@ -4,6 +4,10 @@ name: Monthly image release
 # Alpine) for the Milk-V Duo 256M (riscv / SG2002), boot it in QEMU to PROVE it
 # works, and publish a release whose notes contain the full boot log + diagnostics
 # (auto-build proof, same idea as nuttx-sg2000 releases).
+# NOTE: riscv is the primary, hardware-validated target. arm64 is EXPERIMENTAL /
+# best-effort only: the SG2002 SoC is RISC-V-only (no ARM core), so an arm64 image
+# boots under QEMU -machine virt (which supplies its own DTB) but will NOT boot on
+# the real board.
 on:
   schedule:
     - cron: '37 4 1 * *'          # 1st of every month 04:37 UTC
@@ -18,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [riscv]
+        arch: [riscv, arm64]
     steps:
       - uses: actions/checkout@v4
 
@@ -102,8 +106,10 @@ jobs:
             echo
             echo "Automatically built from the latest stable Linux kernel and the"
             echo "latest Alpine Linux for the Milk-V Duo 256M (riscv / SG2002)."
+            echo "riscv is the primary, board-validated image. arm64 is experimental"
+            echo "(boots in QEMU only - the SG2002 has no ARM core)."
             echo
-            for a in riscv; do
+            for a in riscv arm64; do
               echo "## $a"
               echo
               echo "Flash with:"
@@ -118,7 +124,8 @@ jobs:
             done
             echo "## Combined download"
             echo
-            echo "RISC-V: \`alpine-milkv-duo256m-riscv.img.gz\`"
+            echo "RISC-V (primary): \`alpine-milkv-duo256m-riscv.img.gz\`"
+            echo "ARM64 (experimental, QEMU-only): \`alpine-milkv-duo256m-arm64.img.gz\`"
           } > NOTES.md
           cat NOTES.md
       - name: Publish combined release
