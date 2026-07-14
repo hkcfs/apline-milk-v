@@ -19,7 +19,7 @@ and these docs. Review and verify the output before relying on it.
 - **RISC-V kernel**: `build.sh` fetches the newest **stable mainline** kernel
   from kernel.org on every build
 - **ARM64 kernel**: uses the proven **vendor kernel from `scpcom/linux`**
-  (`licheervnano-merged-5.10.y`, ≈ v5.10.260), since mainline Linux has no
+  (`licheervnano-merged-5.10.y`, ~ v5.10.260), since mainline Linux has no
   arm64 SG2002 support. This is what actually runs on the Duo 256M's Cortex-A53.
 - **Two architectures**: `riscv` (default) and `arm64`, selectable per build
 - **Docker-only**: no host toolchain needed; everything builds inside a
@@ -54,40 +54,40 @@ gzip -cd outputs/riscv/alpine-milkv-duo256m-riscv.img.gz \
 
 ```
 .
-├── build.sh                 # Main build script (kernel + rootfs + image)
-├── Makefile                 # Convenience wrappers (make build-image)
-├── docker/
-│   ├── Dockerfile           # Builder image (toolchain, genimage, deps)
-│   ├── docker-compose.yml   # binfmt + builder services
-│   └── .dockerignore
-├── genimage.cfg             # SD card partition layout
-├── kernel/
-│   ├── milkv-duo256m_defconfig   # RISC-V kernel config (latest stable mainline)
-│   ├── patches/             # RISC-V out-of-tree patches
-│   └── arm64-sg200x/        # ARM64 vendor kernel assets (scpcom/linux)
-│       ├── defconfig        # Duo 256M ARM64 defconfig
-│       ├── dts/             # Board DTS (cv181x_milkv_duo256m_sd.dts)
-│       └── patches/         # Vendor driver backports (mailbox, reset, ...)
-├── milkv-bootloader/
-│   ├── duo256m/             # RISC-V fip.bin
-│   └── duo256m-arm64/       # ARM64 (Cortex-A53) fip.bin
-├── scripts/
-│   ├── setup.sh             # Installs build deps inside the container
-│   ├── second-stage.sh      # Rootfs configuration (runs in chroot)
-│   ├── first-boot.sh        # First-boot partition expansion / SSH keygen
-│   └── capture-boot.sh      # Boots an image in QEMU and logs proof for releases
-├── packages/                # Custom out-of-tree packages (kernel modules / userspace)
-│   ├── kernel-modules/
-│   └── userspace/
-├── outputs/                 # Build artifacts (git-ignored)
-└── .github/workflows/       # builder (2-month) / kernel (weekly) / release (monthly)
+|-- build.sh                 # Main build script (kernel + rootfs + image)
+|-- Makefile                 # Convenience wrappers (make build-image)
+|-- docker/
+|   |-- Dockerfile           # Builder image (toolchain, genimage, deps)
+|   |-- docker-compose.yml   # binfmt + builder services
+|   `-- .dockerignore
+|-- genimage.cfg             # SD card partition layout
+|-- kernel/
+|   |-- milkv-duo256m_defconfig   # RISC-V kernel config (latest stable mainline)
+|   |-- patches/             # RISC-V out-of-tree patches
+|   `-- arm64-sg200x/        # ARM64 vendor kernel assets (scpcom/linux)
+|       |-- defconfig        # Duo 256M ARM64 defconfig
+|       |-- dts/             # Board DTS (cv181x_milkv_duo256m_sd.dts)
+|       `-- patches/         # Vendor driver backports (mailbox, reset, ...)
+|-- milkv-bootloader/
+|   |-- duo256m/             # RISC-V fip.bin
+|   `-- duo256m-arm64/       # ARM64 (Cortex-A53) fip.bin
+|-- scripts/
+|   |-- setup.sh             # Installs build deps inside the container
+|   |-- second-stage.sh      # Rootfs configuration (runs in chroot)
+|   |-- first-boot.sh        # First-boot partition expansion / SSH keygen
+|   `-- capture-boot.sh      # Boots an image in QEMU and logs proof for releases
+|-- packages/                # Custom out-of-tree packages (kernel modules / userspace)
+|   |-- kernel-modules/
+|   `-- userspace/
+|-- outputs/                 # Build artifacts (git-ignored)
+`-- .github/workflows/       # builder (2-month) / kernel (weekly) / release (monthly)
 ```
 
 ## Automated builds (GitHub Actions)
 
 | Workflow        | Schedule            | Produces                                         |
 |-----------------|---------------------|--------------------------------------------------|
-| `builder.yml`   | every 2 months      | Prebaked builder image → GHCR (fast CI runs)     |
+| `builder.yml`   | every 2 months      | Prebaked builder image -> GHCR (fast CI runs)     |
 | `kernel.yml`    | every Monday        | Latest kernel `Image` + DTBs per arch (release)  |
 | `release.yml`   | 1st of each month   | Full flashable image, **boot-tested in QEMU**, release with boot log |
 

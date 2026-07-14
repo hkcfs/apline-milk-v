@@ -60,33 +60,33 @@ the full boot log + SSH diagnostics to a fenced code block for the release notes
 ## Project Structure
 ```
 alpine-milk-v/
-├── SOUL.md                    # This file
-├── build.sh                   # Main build script (kernel + rootfs + image)
-├── Makefile                   # Convenience wrappers (make build-image)
-├── docker/
-│   ├── Dockerfile             # Build container (Ubuntu 24.04 + riscv/arm64 cross-tools)
-│   ├── docker-compose.yml     # binfmt + builder services
-│   └── .dockerignore
-├── genimage.cfg               # SD card partition layout
-├── scripts/
-│   ├── second-stage.sh        # Alpine rootfs configuration
-│   ├── first-boot.sh          # First boot setup (partition expand, SSH keys)
-│   ├── setup.sh               # Build container dependencies (+ ccache)
-│   └── capture-boot.sh        # QEMU boot proof for releases
-├── kernel/
-│   ├── milkv-duo256m_defconfig # RISC-V kernel config (latest stable mainline)
-│   ├── patches/               # RISC-V out-of-tree patches for CV18XX/SG200X
-│   └── arm64-sg200x/          # ARM64 vendor kernel assets (scpcom/linux)
-│       ├── defconfig          # Duo 256M ARM64 defconfig
-│       ├── dts/               # Board DTS (cv181x_milkv_duo256m_sd.dts)
-│       └── patches/           # Vendor driver backports (mailbox, reset, ...)
-├── milkv-bootloader/
-│   ├── duo256m/               # RISC-V fip.bin
-│   └── duo256m-arm64/         # ARM64 (Cortex-A53) fip.bin
-├── packages/                  # Custom out-of-tree packages
-│   ├── kernel-modules/
-│   └── userspace/
-└── outputs/                   # Build artifacts (git-ignored)
+|-- SOUL.md                    # This file
+|-- build.sh                   # Main build script (kernel + rootfs + image)
+|-- Makefile                   # Convenience wrappers (make build-image)
+|-- docker/
+|   |-- Dockerfile             # Build container (Ubuntu 24.04 + riscv/arm64 cross-tools)
+|   |-- docker-compose.yml     # binfmt + builder services
+|   `-- .dockerignore
+|-- genimage.cfg               # SD card partition layout
+|-- scripts/
+|   |-- second-stage.sh        # Alpine rootfs configuration
+|   |-- first-boot.sh          # First boot setup (partition expand, SSH keys)
+|   |-- setup.sh               # Build container dependencies (+ ccache)
+|   `-- capture-boot.sh        # QEMU boot proof for releases
+|-- kernel/
+|   |-- milkv-duo256m_defconfig # RISC-V kernel config (latest stable mainline)
+|   |-- patches/               # RISC-V out-of-tree patches for CV18XX/SG200X
+|   `-- arm64-sg200x/          # ARM64 vendor kernel assets (scpcom/linux)
+|       |-- defconfig          # Duo 256M ARM64 defconfig
+|       |-- dts/               # Board DTS (cv181x_milkv_duo256m_sd.dts)
+|       `-- patches/           # Vendor driver backports (mailbox, reset, ...)
+|-- milkv-bootloader/
+|   |-- duo256m/               # RISC-V fip.bin
+|   `-- duo256m-arm64/         # ARM64 (Cortex-A53) fip.bin
+|-- packages/                  # Custom out-of-tree packages
+|   |-- kernel-modules/
+|   `-- userspace/
+`-- outputs/                   # Build artifacts (git-ignored)
 
 ## Build Behavior
 
@@ -104,7 +104,7 @@ mailbox).
 
 The **ARM64** build targets the real Duo 256M Cortex-A53 core and uses the
 **vendor kernel from `scpcom/linux`** (branch `licheervnano-merged-5.10.y`,
-pinned at `f5fb0eb` ≈ v5.10.260). Mainline Linux has no arm64 SG2002 support,
+pinned at `f5fb0eb` ~ v5.10.260). Mainline Linux has no arm64 SG2002 support,
 so the proven sophgo-sg200x-debian vendor tree is used. Its defconfig, board
 DTS and driver backports live under `kernel/arm64-sg200x/`. On a persistent
 source volume the correct tree is (re)cloned automatically when the arch

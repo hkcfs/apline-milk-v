@@ -235,7 +235,7 @@ if [ "$NEED_SOURCE" = "1" ]; then
         echo "Downloading Linux $LATEST_STABLE..."
         KERN_SRC_URL="https://cdn.kernel.org/pub/linux/kernel/v${LATEST_MAJOR}.x/linux-${LATEST_STABLE}.tar.xz"
         # Download with retries and verify the tarball is complete before
-        # extracting — a truncated download leaves a silently broken tree
+        # extracting - a truncated download leaves a silently broken tree
         # (missing files) that fails far later at `make`.
         for try in 1 2 3; do
             wget -q --tries=3 --timeout=60 -O /tmp/linux.tar.xz "$KERN_SRC_URL" \
@@ -250,7 +250,7 @@ if [ "$NEED_SOURCE" = "1" ]; then
         tar -xf /tmp/linux.tar.xz -C "$KERNEL_DIR" --strip-components=1
         rm -f /tmp/linux.tar.xz
         # Init a git repo so we can use `git apply` (atomic per file) and
-        # `git reset --hard HEAD` to restore a pristine tree before patching —
+        # `git reset --hard HEAD` to restore a pristine tree before patching.
         # exactly the same safe path as the scpcom vendor tree. This avoids the
         # classic `patch` dry-run-vs-apply discrepancy and the new-file-delete
         # corruption that breaks the build on incremental rebuilds.

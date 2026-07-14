@@ -2,13 +2,13 @@
 
 This directory holds out-of-tree packages that get baked into the image
 alongside the stock Alpine + mainline kernel. It mirrors the way the kernel
-lives in its own tree (`kernel/`) — keep board-specific extras here instead of
+lives in its own tree (`kernel/`) - keep board-specific extras here instead of
 patching the rootfs by hand.
 
 ```
 packages/
-├── userspace/      # prebuilt .apk packages installed into the rootfs
-└── kernel-modules/ # out-of-tree .ko kernel modules for the running kernel
+|-- userspace/      # prebuilt .apk packages installed into the rootfs
+`-- kernel-modules/ # out-of-tree .ko kernel modules for the running kernel
 ```
 
 ## userspace/
@@ -32,6 +32,6 @@ boot. Build them against the kernel source that `build.sh` checks out
 
 ## Notes
 
-- Both subdirs are optional — an empty dir is a no-op.
+- Both subdirs are optional - an empty dir is a no-op.
 - The mechanism is wired into the build (`build.sh` copies `packages/` into the
   rootfs; `scripts/second-stage.sh` installs from it). No extra step required.
