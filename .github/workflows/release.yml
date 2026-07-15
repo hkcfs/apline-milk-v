@@ -83,6 +83,11 @@ jobs:
             ghcr.io/${{ github.repository }}/builder-${{ matrix.arch }}:latest \
             bash /project/build.sh --arch ${{ matrix.arch }} duo256m \
             > "outputs/${{ matrix.arch }}/build.log" 2>&1
+          # The image is written by the privileged builder container (root), so it
+          # is root-owned on the host. Reown the outputs so the later QEMU boot
+          # proof (which runs as the non-root runner user and opens the disk
+          # read-write) and the release upload can access it.
+          sudo chown -R "$(id -u):$(id -g)" "outputs/${{ matrix.arch }}"
 
       - name: Capture build + boot proof
         run: |
