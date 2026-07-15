@@ -110,6 +110,9 @@ jobs:
             echo "scpcom/linux) and Alpine Linux, then booted in QEMU to prove it works"
             echo "(see the build + boot log below)."
             echo
+            echo "Note: this is boot-proven in QEMU only; real-hardware validation on"
+            echo "the physical Duo 256M is still pending. Flash at your own risk."
+            echo
             echo "Flash with:"
             echo '```'
             echo "gzip -cd alpine-milkv-duo256m-${{ matrix.arch }}.img.gz | sudo dd of=/dev/sdX bs=4M status=progress"
@@ -163,11 +166,24 @@ jobs:
         with:
           pattern: build-*
           path: builds
+      - name: Set release date
+        id: date
+        run: echo "date=$(date +'%Y-%m')" >> "$GITHUB_OUTPUT"
       - name: Prepare build logs for combined release
         run: |
           mkdir -p release-assets
           cp builds/build-riscv/build.log release-assets/build-riscv.log
           cp builds/build-arm64/build.log release-assets/build-arm64.log
+      - name: Fetch per-arch images from their releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p combined
+          gh release download "duo256m-riscv-${{ steps.date.outputs.date }}" \
+            --pattern 'alpine-milkv-duo256m-riscv.img.gz' --dir combined
+          gh release download "duo256m-arm64-${{ steps.date.outputs.date }}" \
+            --pattern 'alpine-milkv-duo256m-arm64.img.gz' --dir combined
+          ls -lh combined
       - name: Assemble combined release notes
         run: |
           {
@@ -175,10 +191,15 @@ jobs:
             echo
             echo "Automatically built from the latest stable Linux kernel and the"
             echo "latest Alpine Linux for the Milk-V Duo 256M (riscv / SG2002)."
-            echo "riscv is the primary, mainline-kernel image. arm64 uses the vendor"
-            echo "scpcom/linux kernel (~ v5.10.260) which supports the SG2002's"
-            echo "Cortex-A53 core and is intended to boot on real hardware; it is"
-            echo "experimental pending user validation on the physical board."
+            echo "Two kernels are provided:"
+            echo "  - riscv: latest mainline Linux (7.1.3) with SG2002 board support"
+            echo "    (device tree + vendor drivers ported from the vendor tree)."
+            echo "  - arm64: vendor scpcom/linux kernel (~ v5.10.260) targeting the"
+            echo "    SG2002's Cortex-A53 core; it ships the real, tested board DTB."
+            echo
+            echo "Both images are boot-proven in QEMU only. Neither has yet been"
+            echo "validated on the physical Duo 256M board - please report back if"
+            echo "you flash one. Flash at your own risk."
             echo
             for a in riscv arm64; do
               echo "## $a"
@@ -195,8 +216,8 @@ jobs:
             done
             echo "## Combined download"
             echo
-             echo "RISC-V (primary): \`alpine-milkv-duo256m-riscv.img.gz\`"
-             echo "ARM64 (experimental, vendor kernel for real A53 core): \`alpine-milkv-duo256m-arm64.img.gz\`"
+             echo "  - \`alpine-milkv-duo256m-riscv.img.gz\` (mainline kernel, RISC-V)"
+             echo "  - \`alpine-milkv-duo256m-arm64.img.gz\` (vendor kernel, ARM64)"
              echo
              echo "## Full build logs"
              echo
@@ -204,9 +225,6 @@ jobs:
              echo "attached to this release as \`build-riscv.log\` and \`build-arm64.log\`."
            } > NOTES.md
           cat NOTES.md
-      - name: Set release date
-        id: date
-        run: echo "date=$(date +'%Y-%m')" >> "$GITHUB_OUTPUT"
 
       - name: Publish combined release
         uses: softprops/action-gh-release@v2
@@ -218,3 +236,5 @@ jobs:
           files: |
             release-assets/build-riscv.log
             release-assets/build-arm64.log
+            combined/alpine-milkv-duo256m-riscv.img.gz
+            combined/alpine-milkv-duo256m-arm64.img.gz
