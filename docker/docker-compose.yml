@@ -28,7 +28,7 @@ services:
 volumes:
   kernel-src:
     external: true
-    name: apline-milk-v_kernel-src
+    name: alpine-milk-v_kernel-src
   ccache:
     external: true
-    name: apline-milk-v_ccache
+    name: alpine-milk-v_ccache

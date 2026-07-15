@@ -9,7 +9,7 @@ prebaked Docker builder image, published to GitHub Container Registry (GHCR).
 ```
                           GHCR (package registry)
                   +----------------------------------+
-                  | ghcr.io/hkcfs/apline-milk-v/builder
+                  | ghcr.io/hkcfs/alpine-milk-v/builder
                   |   |- builder-riscv:latest       |
                   |   |- builder-arm64:latest       |
                   |   |- builder:latest (same image)|
