@@ -595,9 +595,13 @@ if command -v mkimage >/dev/null 2>&1; then
     if [ -f "$BOARD_DTB_FILE" ] && [ -f "$KERNEL_OUT/Image" ]; then
         # The Milk-V Duo 256M debug serial is ttyS0 for the RISC-V core and
         # ttyAMA0 for the ARM core; rootfs lives on mmcblk0p2.
+        # The board has ONLY 256 MB of DRAM (SG2002 SiP). The vendor DTB/U-Boot
+        # describe 512 MB (shared DTS across the 256M/512M family), so we MUST
+        # cap Linux to the real 256 MB or it crashes touching absent RAM.
+        # cma=32M keeps the vendor camera/NPU reservations from eating it all.
         BOOT_CONSOLE="ttyS0"
         [ "$ARCH_TARGET" = "arm64" ] && BOOT_CONSOLE="ttyAMA0"
-        BOOTARGS="console=${BOOT_CONSOLE},115200 earlycon root=/dev/mmcblk0p2 rootwait rw"
+        BOOTARGS="console=${BOOT_CONSOLE},115200 earlycon mem=256M cma=32M root=/dev/mmcblk0p2 rootwait rw"
         sed -e "s|__IMAGE__|$KERNEL_OUT/Image|g" \
             -e "s|__DTB__|$BOARD_DTB_FILE|g" \
             -e "s|__ARCH__|$ARCH_TARGET|g" \
