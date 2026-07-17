@@ -19,37 +19,7 @@ permissions:
   contents: write
 
 jobs:
-  # Build & push the prebaked builder image first so the image jobs always get
-  # a valid image (no race / no fragile inline `docker build` fallback).
-  build-builder:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push builder image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/builder-riscv:latest
-            ghcr.io/${{ github.repository }}/builder-arm64:latest
-            ghcr.io/${{ github.repository }}/builder:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   image:
-    needs: build-builder
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -64,25 +34,38 @@ jobs:
       - name: Register binfmt (qemu-user)
         uses: docker/setup-qemu-action@v3
 
-      - name: Install QEMU / sshpass / mtools
+      - name: Install QEMU / sshpass / mtools / buildx
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-system-riscv64 qemu-system-arm \
             sshpass mtools
+
+      # Build the builder image *in this job* straight from the committed
+      # Dockerfile. We deliberately DO NOT pull a prebuilt ghcr.io image and DO
+      # NOT use the GHA layer cache: a stale cached `COPY kernel/` layer would
+      # bake the OLD (broken) patches and silently produce a broken image that
+      # fails the build at the very end (exit 2). Building here guarantees the
+      # image always contains the exact source tree that was just checked out.
+      - name: Build builder image (self-contained, no cache)
+        run: |
+          docker build --no-cache -f docker/Dockerfile \
+            -t builder-${{ matrix.arch }}:local .
 
       - name: Build image (${{ matrix.arch }})
         run: |
           # outputs/ is gitignored and absent on a clean checkout; the build.log
           # redirect below needs the arch subdir to already exist.
           mkdir -p "outputs/${{ matrix.arch }}" "outputs/kernel-${{ matrix.arch }}"
-          docker pull ghcr.io/${{ github.repository }}/builder-${{ matrix.arch }}:latest
+          # pipefail ensures a build.sh failure (non-zero) is NOT masked by tee's
+          # exit 0, so the step still turns red on a real build error.
+          set -o pipefail
           docker run --rm --privileged \
             -v "${{ github.workspace }}/outputs:/project/images" \
             -v "${{ github.workspace }}/.kernel-src-${{ matrix.arch }}:/project/kernel/linux" \
             -v "${{ github.workspace }}/.ccache:/project/.ccache" \
-            ghcr.io/${{ github.repository }}/builder-${{ matrix.arch }}:latest \
+            builder-${{ matrix.arch }}:local \
             bash /project/build.sh --arch ${{ matrix.arch }} duo256m \
-            > "outputs/${{ matrix.arch }}/build.log" 2>&1
+            2>&1 | tee "outputs/${{ matrix.arch }}/build.log"
           # The image is written by the privileged builder container (root), so it
           # is root-owned on the host. Reown the outputs so the later QEMU boot
           # proof (which runs as the non-root runner user and opens the disk
