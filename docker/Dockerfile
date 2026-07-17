@@ -15,6 +15,7 @@ WORKDIR /project
 COPY build.sh /project/
 COPY scripts/ /project/scripts/
 COPY genimage.cfg /project/
+COPY multi.its.in /project/
 COPY milkv-bootloader /project/milkv-bootloader/
 COPY kernel/ /project/kernel/
 COPY packages/ /project/packages/
